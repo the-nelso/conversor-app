@@ -16,7 +16,7 @@ class RecursoAdapter(private val recursos: List<Recurso>) :
 
         fun bind(recurso: Recurso) {
             binding.textViewMoeda.text = recurso.moeda
-            binding.textViewValor.text = String.format("R$ %.2f", recurso.valor)
+            binding.textViewValor.text = String.format("%.5f", recurso.valor)
         }
     }
 

@@ -110,67 +110,67 @@ class ConversorActivity : AppCompatActivity() {
     }
 
     private fun converterMoedas(moedaOrigem: String, moedaDestino: String, valor: Float) {
+        progressBar.visibility = ProgressBar.VISIBLE
+        progressBar.progress = 0
+
         if ((moedaOrigem == "BTC" || moedaOrigem == "ETH") && (moedaDestino == "BTC" || moedaDestino == "ETH")) {
+            preencherProgresso(33) // Atualiza a barra para 33% durante a 1ª chamada
             requestAPI(moedaOrigem, "BRL") { bidOrigem ->
                 if (bidOrigem != null) {
+                    preencherProgresso(66) // Atualiza a barra para 66% durante a 2ª chamada
                     requestAPI(moedaDestino, "BRL") { bidDestino ->
                         if (bidDestino != null) {
-                            val valorEmBRL = valor*bidOrigem
-                            val valorEmDestino = valorEmBRL/bidDestino
+                            val valorEmBRL = valor * bidOrigem
+                            val valorEmDestino = valorEmBRL / bidDestino
                             atualizarSaldo(moedaOrigem, moedaDestino, valor, valorEmDestino)
+                            preencherProgresso(100) // Conclui a barra em 100%
                             Toast.makeText(
                                 this@ConversorActivity,
                                 "Convertido para $valorEmDestino $moedaDestino",
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
-                            Toast.makeText(
-                                this@ConversorActivity,
-                                "Falha ao obter cotação da moeda de destino",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            mostrarErro("Falha ao obter cotação da moeda de destino")
                         }
                     }
                 } else {
-                    Toast.makeText(
-                        this@ConversorActivity,
-                        "Falha ao obter cotação da moeda de origem",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    mostrarErro("Falha ao obter cotação da moeda de origem")
                 }
             }
         } else {
-            if (moedaDestino == "BTC" || moedaDestino == "ETH") {
-                requestAPI(moedaDestino, moedaOrigem) { bidDestino ->
-                    if (bidDestino != null) {
-                        val valorConvertido = valor / bidDestino
-                        atualizarSaldo(moedaOrigem, moedaDestino, valor, valorConvertido)
-                        Toast.makeText(
-                            this@ConversorActivity,
-                            "Convertido para $valorConvertido $moedaDestino",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Toast.makeText(this@ConversorActivity, "Falha ao obter cotação da moeda de destino", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                requestAPI(moedaOrigem, moedaDestino) { bid ->
-                    if (bid != null) {
-                        val valorConvertido = valor * bid
-                        atualizarSaldo(moedaOrigem, moedaDestino, valor, valorConvertido)
-                        Toast.makeText(
-                            this@ConversorActivity,
-                            "Convertido para $valorConvertido $moedaDestino",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Toast.makeText(this@ConversorActivity, "Falha ao obter cotação", Toast.LENGTH_SHORT).show()
-                    }
+            preencherProgresso(50) // Atualiza para 50% durante a chamada
+            val moedaChamada = if (moedaDestino == "BTC" || moedaDestino == "ETH") moedaDestino else moedaOrigem
+            val moedaReferencia = if (moedaChamada == moedaDestino) moedaOrigem else moedaDestino
+
+            requestAPI(moedaChamada, moedaReferencia) { bid ->
+                if (bid != null) {
+                    val valorConvertido = if (moedaDestino == moedaChamada) valor / bid else valor * bid
+                    atualizarSaldo(moedaOrigem, moedaDestino, valor, valorConvertido)
+                    preencherProgresso(100) // Conclui a barra em 100%
+                    Toast.makeText(
+                        this@ConversorActivity,
+                        "Convertido para $valorConvertido $moedaDestino",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    mostrarErro("Falha ao obter cotação")
                 }
             }
         }
-        progressBar.visibility = ProgressBar.GONE    }
+    }
+
+    private fun preencherProgresso(percentual: Int) {
+        progressBar.progress = percentual
+        if (percentual == 100) {
+            progressBar.visibility = ProgressBar.GONE
+            finish()
+        }
+    }
+
+    private fun mostrarErro(mensagem: String) {
+        Toast.makeText(this@ConversorActivity, mensagem, Toast.LENGTH_SHORT).show()
+        progressBar.visibility = ProgressBar.GONE
+    }
 
 
     private fun atualizarSaldo(moedaOrigem: String, moedaDestino: String, valorOrigem: Float, valorDestino: Float) {
