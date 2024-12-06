@@ -104,6 +104,7 @@ class ConversorActivity : AppCompatActivity() {
                 Toast.makeText(this@ConversorActivity, "Erro: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
+        finish()
     }
 
     private fun atualizarSaldo(moedaOrigem: String, moedaDestino: String, valorOrigem: Float, valorDestino: Float) {
