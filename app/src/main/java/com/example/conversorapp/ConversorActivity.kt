@@ -67,49 +67,103 @@ class ConversorActivity : AppCompatActivity() {
         }
     }
 
-    private fun converterMoedas(moedaOrigem: String, moedaDestino: String, valor: Float) {
+
+    private fun requestAPI(moedaOrigem: String, moedaDestino: String, callback: (Float?) -> Unit) {
         val retrofit = Retrofit.Builder()
             .baseUrl("https://economia.awesomeapi.com.br/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
         val service = retrofit.create(AwesomeApiService::class.java)
+
         val call = service.getCotacao("$moedaOrigem-$moedaDestino")
 
         call.enqueue(object : Callback<Map<String, CotacaoResponse>> {
-            override fun onResponse(
-                call: Call<Map<String, CotacaoResponse>>,
-                response: Response<Map<String, CotacaoResponse>>
-            ) {
+            override fun onResponse(call: Call<Map<String, CotacaoResponse>>, response: Response<Map<String, CotacaoResponse>>) {
                 if (response.isSuccessful) {
                     val cotacaoResponse = response.body()?.values?.firstOrNull()
-                    if (cotacaoResponse != null) {
-                        val bid = cotacaoResponse.bid.toFloatOrNull()
-                        if (bid != null) {
-                            val valorConvertido = valor * bid
-                            atualizarSaldo(moedaOrigem, moedaDestino, valor, valorConvertido)
-                            Toast.makeText(this@ConversorActivity, "Convertido para $valorConvertido $moedaDestino", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(this@ConversorActivity, "Falha ao interpretar a cotação", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(this@ConversorActivity, "Resposta inválida da API", Toast.LENGTH_SHORT).show()
-                    }
+                    val bid = cotacaoResponse?.bid?.toFloatOrNull()
+                    callback(bid)
                 } else {
-                    Toast.makeText(this@ConversorActivity, "Erro ao obter cotação: ${response.message()}", Toast.LENGTH_SHORT).show()
+                    callback(null)
                 }
             }
 
             override fun onFailure(call: Call<Map<String, CotacaoResponse>>, t: Throwable) {
-                Toast.makeText(this@ConversorActivity, "Erro: ${t.message}", Toast.LENGTH_SHORT).show()
+                callback(null)
             }
         })
-        finish()
     }
+
+    private fun converterMoedas(moedaOrigem: String, moedaDestino: String, valor: Float) {
+        if ((moedaOrigem == "BTC" || moedaOrigem == "ETH") && (moedaDestino == "BTC" || moedaDestino == "ETH")) {
+            requestAPI(moedaOrigem, "BRL") { bidOrigem ->
+                if (bidOrigem != null) {
+                    requestAPI(moedaDestino, "BRL") { bidDestino ->
+                        if (bidDestino != null) {
+                            val valorEmBRL = valor*bidOrigem
+                            val valorEmDestino = valorEmBRL/bidDestino
+                            atualizarSaldo(moedaOrigem, moedaDestino, valor, valorEmDestino)
+                            Toast.makeText(
+                                this@ConversorActivity,
+                                "Convertido para $valorEmDestino $moedaDestino",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                this@ConversorActivity,
+                                "Falha ao obter cotação da moeda de destino",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                } else {
+                    Toast.makeText(
+                        this@ConversorActivity,
+                        "Falha ao obter cotação da moeda de origem",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } else {
+            if (moedaDestino == "BTC" || moedaDestino == "ETH") {
+                requestAPI(moedaDestino, moedaOrigem) { bidDestino ->
+                    if (bidDestino != null) {
+                        val valorConvertido = valor / bidDestino
+                        atualizarSaldo(moedaOrigem, moedaDestino, valor, valorConvertido)
+                        Toast.makeText(
+                            this@ConversorActivity,
+                            "Convertido para $valorConvertido $moedaDestino",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(this@ConversorActivity, "Falha ao obter cotação da moeda de destino", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                requestAPI(moedaOrigem, moedaDestino) { bid ->
+                    if (bid != null) {
+                        val valorConvertido = valor * bid
+                        atualizarSaldo(moedaOrigem, moedaDestino, valor, valorConvertido)
+                        Toast.makeText(
+                            this@ConversorActivity,
+                            "Convertido para $valorConvertido $moedaDestino",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(this@ConversorActivity, "Falha ao obter cotação", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
 
     private fun atualizarSaldo(moedaOrigem: String, moedaDestino: String, valorOrigem: Float, valorDestino: Float) {
         val db = dbHelper.writableDatabase
         db.execSQL("UPDATE recursos SET valor = valor - ? WHERE moeda = ?", arrayOf(valorOrigem, moedaOrigem))
         db.execSQL("UPDATE recursos SET valor = valor + ? WHERE moeda = ?", arrayOf(valorDestino, moedaDestino))
     }
+
+
 }
