@@ -21,6 +21,11 @@ class DepositoActivity : AppCompatActivity() {
         val db = dbHelper.writableDatabase;
         val btnDepositar = findViewById<Button>(R.id.confirmarButton)
         val editTextDeposito = findViewById<EditText>(R.id.editTextDeposito)
+        val btnVoltar = findViewById<Button>(R.id.btnVoltar)
+
+        btnVoltar.setOnClickListener {
+            finish()
+        }
 
         btnDepositar.setOnClickListener {
             val valor = editTextDeposito.text.toString().toFloatOrNull()
@@ -32,6 +37,9 @@ class DepositoActivity : AppCompatActivity() {
                 Toast.makeText(this, "Valor inválido!", Toast.LENGTH_SHORT).show()
             }
         }
+
+
+
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())

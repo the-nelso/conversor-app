@@ -47,7 +47,6 @@ class ListarRecursosActivity : AppCompatActivity() {
             val valor = cursor.getFloat(cursor.getColumnIndexOrThrow(DataBaseHelper.COLUMN_VALOR))
             recursos.add(Recurso(moeda, valor))
         }
-
         cursor.close()
         return recursos
     }
