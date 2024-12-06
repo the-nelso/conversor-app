@@ -87,6 +87,8 @@
         android:id="@+id/textView4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="40dp"
+        android:layout_marginEnd="8dp"
         android:text="Selecione a moeda e quanto deseja para realizar a conversão."
         app:layout_constraintBottom_toTopOf="@+id/spinnerOrigem"
         app:layout_constraintEnd_toEndOf="parent"

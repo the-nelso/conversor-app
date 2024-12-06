@@ -2,11 +2,7 @@ package com.example.conversorapp
 
 import android.content.ContentValues
 import android.os.Bundle
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Spinner
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -23,12 +19,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 class ConversorActivity : AppCompatActivity() {
 
     private lateinit var dbHelper: DataBaseHelper
-
+    private lateinit var progressBar: ProgressBar
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_conversor)
-
+        progressBar = findViewById(R.id.progressBar)
         dbHelper = DataBaseHelper(this)
         val db = dbHelper.writableDatabase
         val btnConverter = findViewById<Button>(R.id.conversaoButton);
@@ -53,7 +49,14 @@ class ConversorActivity : AppCompatActivity() {
                 if (moedaOrigem == moedaDestino) {
                     Toast.makeText(this, "Selecione moedas diferentes", Toast.LENGTH_SHORT).show()
                 } else {
-                    converterMoedas(moedaOrigem, moedaDestino, valor)
+                    verificarRecursosSuficientes(moedaOrigem, valor) { temSuficiente ->
+                        if (temSuficiente) {
+                            progressBar.visibility = ProgressBar.VISIBLE
+                            converterMoedas(moedaOrigem, moedaDestino, valor)
+                        } else {
+                            Toast.makeText(this, "Saldo insuficiente na moeda de origem", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             } else {
                 Toast.makeText(this, "Informe um valor válido", Toast.LENGTH_SHORT).show()
@@ -67,7 +70,18 @@ class ConversorActivity : AppCompatActivity() {
         }
     }
 
+    private fun verificarRecursosSuficientes(moedaOrigem: String, valor: Float, callback: (Boolean) -> Unit) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT valor FROM recursos WHERE moeda = ?", arrayOf(moedaOrigem))
 
+        if (cursor.moveToFirst()) {
+            val saldo = cursor.getFloat(cursor.getColumnIndexOrThrow("valor"))
+            callback(saldo >= valor)
+        } else {
+            callback(false)
+        }
+        cursor.close()
+    }
     private fun requestAPI(moedaOrigem: String, moedaDestino: String, callback: (Float?) -> Unit) {
         val retrofit = Retrofit.Builder()
             .baseUrl("https://economia.awesomeapi.com.br/")
@@ -156,7 +170,7 @@ class ConversorActivity : AppCompatActivity() {
                 }
             }
         }
-    }
+        progressBar.visibility = ProgressBar.GONE    }
 
 
     private fun atualizarSaldo(moedaOrigem: String, moedaDestino: String, valorOrigem: Float, valorDestino: Float) {
